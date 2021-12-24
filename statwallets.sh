@@ -1,6 +1,6 @@
 #!/bin/bash
 
-forks="aedge apple avocado btcgreen cactus cannabis chaingreen chia chives covid cryptodoge dogechia ethgreen flax flora fork goji greendoge hddcoin kale lucky maize melati mint mog>
+forks="aedge apple avocado btcgreen cactus cannabis chaingreen chia chives covid cryptodoge dogechia ethgreen flax flora fork goji greendoge hddcoin kale lucky maize melati mint mogua pipscoin salvia scam sector seno shibgreen skynet socks spare staicoin stor taco tad tranzact venidium wheat"
 
 for fork in ${forks[@]}
 
@@ -8,8 +8,9 @@ for fork in ${forks[@]}
 
         if [ "$( docker container inspect -f '{{.State.Status}}' coctohug-$fork )" == "running" ]; then
 
-                status=`docker exec coctohug-${fork[@]} ${fork[@]} wallet show | grep 'Sync status:' | cut --fields 3 --delimiter=\ | head -n 1`
-                height=`docker exec coctohug-${fork[@]} ${fork[@]} wallet show | grep 'Wallet height:' | cut --fields 3 --delimiter=\ `
+                docker exec coctohug-${fork[@]} ${fork[@]} wallet show > /home/user/wallet/wallet.tmp
+                status=`cat /home/user/wallet/wallet.tmp | grep 'Sync status:' | cut --fields 3 --delimiter=\ | head -n 1`
+                height=`cat /home/user/wallet/wallet.tmp | grep 'Wallet height:' | cut --fields 3 --delimiter=\ `
                 if [ -f "/home/user/wallet/height.${fork[@]}" ]; then lastheight=`cat /home/user/wallet/height.${fork[@]}`; else lastheight=0; fi
                 echo $height >/home/user/wallet/height.${fork[@]}
                 change=$(echo "$height - $lastheight" | bc)
