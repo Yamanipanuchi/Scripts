@@ -7,16 +7,14 @@ for fork in ${forks[@]}
 do
         if [ "$( docker container inspect -f '{{.State.Status}}' coctohug-$fork )" == "exited" ]; then
 
+                until [ "$( awk '{print $2}' /proc/loadavg | cut -d. -f1 )" -lt 6 ]; do
+                        echo "Waiting for CPU to calm down"
+                        sleep 10
+                done
+
                 echo "Starting $fork"
                 docker start coctohug-${fork[@]}
                 sleep 60
-
-                until [ "$( awk '{print $2}' /proc/loadavg | cut -d. -f1 )" -lt 6 ]; do
-
-                        echo "Waiting for CPU to calm down"
-                        sleep 10
-
-                done
 
                 else
 
