@@ -16,7 +16,8 @@ function push {
                 }
 
 #CuctoHug Forks
-forks="Chia Flax HDDCoin StaiCoin Stor BTCGreen Flora Spare Chives Maize Wheat DogeChia Apple Taco Tad Cactus Socks GreenDoge Lucky Shibgreen CryptoDoge Skynet Melati Kale Aedge Mint Mogua Melon Rolls GoldCoin Kujenga PipsCoin Salvia Tranzact Venidium"
+forks="Aedge Apple BTCGreen Cactus Chives Cryptodoge Dogechia Flax Flax Goldcoin Greendoge HDDcoin Kale Kujenga Lucky Maize Melon Mint Mogua Pipscoin Rolls Salvia Shibgreen Skynet Socks Spare Staicoin Stor Taco Tad Tranzact Venidium Wheat"
+#forks="Chia Flax HDDCoin StaiCoin Stor BTCGreen Flora Spare Chives Maize Wheat DogeChia Apple Taco Tad Cactus Socks GreenDoge Lucky Shibgreen CryptoDoge Skynet Melati Kale Aedge Mint Melon Rolls GoldCoin PipsCoin Salvia Tranzact Venidium"
 
 for fork in ${forks[@]}
 
@@ -49,3 +50,5 @@ if [ "$( docker container inspect -f '{{.State.Status}}' coctohug-${lowerfork[@]
 
         fi
 fi
+
+done
