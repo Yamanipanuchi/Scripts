@@ -1,31 +1,60 @@
 #!/bin/bash
 
-forks="aedge apple avocado btcgreen cactus cannabis chaingreen chia chives covid cryptodoge dogechia ethgreen flax flora fork goji greendoge hddcoin kale lucky maize melati mint mogua pipscoin salvia scam sector seno shibgreen skynet socks spare staicoin stor taco tad tranzact venidium wheat"
+source /home/user/wallet.cfg
+sleep 1
+NEWLINE=$'\n'
 
-for fork in ${forks[@]}
+echo    $(date) >/home/user/SyncStat.txt
 
-        do
+for fork in ${forks[@]} ; do
 
-        if [ "$( docker container inspect -f '{{.State.Status}}' coctohug-$fork )" == "running" ]; then
+        lowerfork=`echo $fork | tr '[:upper:]' '[:lower:]'`
+        lastheight=0
+        lastbalance=0
+        balance=0
 
-                docker exec coctohug-${fork[@]} ${fork[@]} wallet show > /home/user/wallet/wallet.tmp
-                status=`cat /home/user/wallet/wallet.tmp | grep 'Sync status:' | cut --fields 3 --delimiter=\ | head -n 1`
-                height=`cat /home/user/wallet/wallet.tmp | grep 'Wallet height:' | cut --fields 3 --delimiter=\ `
-                if [ -f "/home/user/wallet/height.${fork[@]}" ]; then lastheight=`cat /home/user/wallet/height.${fork[@]}`; else lastheight=0; fi
-                echo $height >/home/user/wallet/height.${fork[@]}
+        if [ "$( docker container inspect -f '{{.State.Status}}' coctohug-$lowerfork )" == "running" ]; then
+
+                if [ "$( cat /home/user/wallet/${lowerfork[@]}.cap | grep 'Connection' | cut --fields 1 --delimiter=\ )" != "Connection" ]; then
+                        status=`cat /home/user/wallet/${lowerfork[@]}.cap | grep 'Sync status:' | cut --fields 3 --delimiter=\ | head -n 2`
+                        height=`cat /home/user/wallet/${lowerfork[@]}.cap | grep 'Wallet height:' | cut --fields 3 --delimiter=\ `
+                        balance=`cat /home/user/wallet/${lowerfork[@]}.cap | grep '.Total Balance:' | cut --fields 6 --delimiter=\ | head -n 1`
+                else
+                        if [ -f "/home/user/wallet/$fork.info" ]; then source /home/user/wallet/$fork.info ; fi
+                fi
+                if [ -f "/home/user/wallet/${fork[@]}.info" ]; then source /home/user/wallet/${fork[@]}.info ; fi
+                if [ "$height" != "" ]; then echo lastheight=$height >/home/user/wallet/${fork[@]}.info ; fi
+                if [ "$balance" != "" ]; then echo lastbalance=$balance >>/home/user/wallet/${fork[@]}.info ; fi
                 change=$(echo "$height - $lastheight" | bc)
 
-                if [ "$( echo -n "$fork" | wc -c)" -lt 7 ]; then
-                        echo $fork $'\t\t' $status $'-' ${height} $'+' $change
-                        else
-                        echo $fork $'\t' $status $'-' ${height} $'+' $change
+#               if [ "$status" == "Synced" ]; then docker stop coctohug-$fork >/dev/null ; fi
+
+                if [ "$change" == "0" ]; then 
+                        docker stop coctohug-$lowerfork >/dev/null
+                        sleep 5
+                        docker start coctohug-$lowerfork >/dev/null
                 fi
-                else
+
+
+
                 if [ "$( echo -n "$fork" | wc -c)" -lt 7 ]; then
-                        if [ -f "/home/user/wallet/height.${fork[@]}" ]; then lastheight=`cat /home/user/wallet/height.${fork[@]}`; else lastheight=0; fi
-                        echo $fork $'\t\t' Offline - $lastheight
+                        echo $fork $'\t\t'${balance:0:7}$'\t' $status $'-' ${height} $'+' $change >>/home/user/SyncStat.txt
+                        echo $fork $'\t\t'${balance:0:7}$'\t' $status $'-' ${height} $'+' $change
                         else
-                        echo $fork $'\t' Offline - $lastheight
+                        echo $fork $'\t'${balance:0:7}$'\t' $status $'-' ${height} $'+' $change >>/home/user/SyncStat.txt
+                        echo $fork $'\t'${balance:0:7}$'\t' $status $'-' ${height} $'+' $change
+                fi
+
+                else
+
+                if [ -f "/home/user/wallet/$fork.info" ]; then source /home/user/wallet/$fork.info ; fi
+
+                if [ "$( echo -n "$fork" | wc -c)" -lt 7 ]; then
+                        echo $fork $'\t\t'${lastbalance:0:7}$'\t' Offline - $lastheight >>/home/user/SyncStat.txt
+                        echo $fork $'\t\t'${lastbalance:0:7}$'\t' Offline - $lastheight
+                        else
+                        echo $fork $'\t'${lastbalance:0:7}$'\t' Offline - $lastheight >>/home/user/SyncStat.txt
+                        echo $fork $'\t'${lastbalance:0:7}$'\t' Offline - $lastheight
                 fi
         fi
 done
