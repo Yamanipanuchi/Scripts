@@ -1,7 +1,7 @@
 #!/bin/bash
 
-sitwallet=sit1rf5dhquznnfxlgxnjz7ynvp550c0lluf9vvagsj2tjzls53guezqa3uwa7
-goldwallet=gl1rf5dhquznnfxlgxnjz7ynvp550c0lluf9vvagsj2tjzls53guezq0s2mk6
+sitwallet=
+goldwallet=
 
 if [ "$( docker container inspect -f '{{.State.Status}}' coctohug-silicoin )" == "running" ]; then
 
