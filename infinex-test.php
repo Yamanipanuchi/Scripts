@@ -9,13 +9,14 @@ for($i = 1; $i < $argc; $i++) {
     $filters[$i - 1] = $argv[$i];
 }
 
-$filename = $filters[0];
+$symbol = $filters[0];
+$oside = $filters[1];
+$osize = $filters[2];
 
-$ini_array = parse_ini_file($filename);
-$pair = ($ini_array['pair']); 
-$symbol = ($ini_array['symbol']);
-$osize = ($ini_array['osize']);
-$oside = ($ini_array['oside']);
+$pair = $symbol.'/USDT';
+
+if ($symbol == 'XCH'){$xch = 'XCH';} else {$xch = 'NO';}
+if ($oside == 'BUY'){$symbol = 'USDT';}
 
 $ch = curl_init();
 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
@@ -24,7 +25,6 @@ curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 /*Get current Low/High*/
 
 /*curl -X POST https://api.vayamos.cc/spot/orderbook -H 'Content-Type: application/json' -d '{"pair": "CAC/USDT"}'*/
-
 
 curl_setopt($ch, CURLOPT_URL, 'https://api.vayamos.cc/spot/orderbook');
 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['pair' => $pair]));
@@ -37,7 +37,10 @@ $highestBidStr = $highestBidDec->toFixed(7);
 $lowestAskDec = new Decimal($result['asks'][0]['price']);
 $lowestAskStr = $lowestAskDec->toFixed(7);
 
-echo 'Pair: '.$pair.' Highest bid: '.$highestBidStr.' Lowestbid: '.$lowestAskStr."\n";
+echo "Pair: ".$pair." Highest bid: ".$highestBidStr." Lowestbid: ".$lowestAskStr." ";
+
+if ($oside == 'BUY'){$priceDec = $highestBidDec;$priceStr = $highestBidStr;}
+if ($oside == 'SELL'){$priceDec = $lowestAskDec;$priceStr = $lowestAskStr;}
 
 /*Get avblbalance*/
 
@@ -51,17 +54,25 @@ $result = json_decode(curl_exec($ch), true);
 $avblBalanceDec = new Decimal($result['balances'][$symbol]['avbl']);
 $avblBalanceStr = $avblBalanceDec->toFixed(7);
 
-echo 'Balance: '.$avblBalanceStr."\n";
+echo 'Balance: '.$avblBalanceStr."\t";
 
 /*Maths*/
 
-$mybid = $highestBidDec + '0.0000001';
-$mybid = $mybid->toFixed(7);
-$amountDec = ($osize / $highestBidDec);
+if ($oside == 'BUY'){$mybid = $priceDec + '0.0000001';}
+if ($oside == 'SELL'){$mybid = $priceDec - '0.0000001';}
+if ($xch == 'XCH'){$mybid = $priceDec + '0.01';}
 
-$amountStr = $amountDec->toFixed(0);
+$amountDec = ($osize / $priceDec);
+
+if ($xch == 'XCH'){$amountDec = '.00075'*$mybid;}
+if ($xch == 'XCH'){$amountStr = $amountDec->toFixed(7);}
+
+if ($oside == 'SELL'){if (($amountDec*2) > $avblBalanceDec){$amountDec = $avblBalanceDec;$amountStr = $avblBalanceStr;} else {$amountStr = $amountDec->toFixed(0);}}
+if ($oside == 'BUY'){if ($xch = 'XCH'){} else {$amountStr = $amountDec->toFixed(0);}}
 
 if (($mybid*$amountDec) > $avblBalanceDec){echo 'Insufficient Funds.'."\n";exit;}
+
+$mybid = $mybid->toFixed(7);
 
 /*Get Open Order*/
 
@@ -74,9 +85,10 @@ $result = json_decode(curl_exec($ch), true);
 
 if (empty($result['orders'])){} else {
 
-foreach($result['orders'] as $side) {if($side['side'] === $oside) {$price = $side['price'];break;}}
-if ($price == $highestBidDec){echo 'Current order already lowest price'."\n";
-echo 'Price '.$price.' - Mybid '.$highestBidDec."\n";
+foreach($result['orders'] as $side) {if($side['side'] === $oside) {$oprice = $side['price'];break;}}
+
+if ($oprice == $priceDec){echo 'Current order already lowest price. - ';
+echo 'Price '.$oprice.' - Mybid '.$priceDec."\n";
 exit;}}
 
 if (empty($result['orders'])){echo 'Currently no open orders'."\n";} else {foreach($result['orders'] as $side) {if($side['side'] === $oside) {$order = $side['obid'];break;}}}
@@ -105,10 +117,10 @@ echo "\n";}
 
 /*curl -X POST https://api.vayamos.cc/spot/open_orders/new -H 'Content-Type: application/json' -d '{"api_key": "0000000000000000000000000000000000", "pair": "CAC/USDT", "side": "BUY", "type": "LIMIT", "time_in_force": "GTC", "price": "0.001", "amount": "500"}'*/
 
-echo 'Open '.$oside.' order for '.$pair.', '.$amountStr.' for $'.$mybid." - ";
+echo "\e[31mOpen ".$oside." order for ".$pair.", ".$amountStr." for $".$mybid." - ";
 
 curl_setopt($ch, CURLOPT_URL, 'https://api.vayamos.cc/spot/open_orders/new');
-curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['api_key' => $api_key, 'pair' => $pair, 'side' => $oside, 'type' => 'LIMIT', 'time_in_force' => 'GTC', 'price' => $mybid, 'amount' => $amountDec->toFixed(0)]));
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['api_key' => $api_key, 'pair' => $pair, 'side' => $oside, 'type' => 'LIMIT', 'time_in_force' => 'GTC', 'price' => $mybid, 'amount' => $amountStr]));
 
 $result = json_decode(curl_exec($ch), true);
 
@@ -117,7 +129,7 @@ if ($success == '0'){$error = ($result['error']);}
 
 if ($success == '1'){echo 'Successfully Posted';} else {echo $error;} 
 
-echo "\n";
+echo "\n\e[39m";
 
 
 ?>
